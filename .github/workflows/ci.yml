@@ -1,0 +1,33 @@
+name: Pipeline CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Setup da SDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17.0'
+          distribution: 'zulu'
+          cache: 'gradle'
+
+      - name: Dando permissão de execução do Gradle
+        run: |
+          chmod +x gradlew
+
+      - name: Rodando checagem Lint
+        run: |
+          ./gradlew lintDebug
+
+      - name: Rodando testes unitários
+        run: |
+          ./gradlew test
