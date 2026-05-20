@@ -1,0 +1,1 @@
+[![Pipeline CI](https://github.com/joaoxaviersilva/LendIt/actions/workflows/ci.yml/badge.svg)](https://github.com/joaoxaviersilva/LendIt/actions/workflows/ci.yml)
