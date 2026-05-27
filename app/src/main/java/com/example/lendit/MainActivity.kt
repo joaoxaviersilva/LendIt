@@ -1,3 +1,8 @@
+/*
+ * Eu João Xavier fiz esse arquivo para gerenciar o fluxo principal de telas do LendIt,
+ * controlando a autenticação de usuários e a interface de gerenciamento de empréstimos com Jetpack Compose.
+ */
+
 package com.example.lendit
 
 import android.os.Bundle
@@ -63,11 +68,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            // Aplica o tema personalizado do aplicativo LendIt
             LendItTheme {
+                // Configura a superfície base ocupando o tamanho total da tela
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    // Inicializa o fluxo de verificação de autenticação
                     MainFlow()
                 }
             }
@@ -78,9 +86,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainFlow() {
     val context = LocalContext.current
+    // Instancia e retém a referência do banco de dados local SQLite
     val dbHelper = remember { DbHelper(context) }
+    // Estado que monitora o identificador do usuário autenticado no sistema
     var usuarioLogadoId by remember { mutableStateOf<Int?>(null) }
 
+    // Condicional que define se exibe a tela de login ou a aplicação principal
     if (usuarioLogadoId == null) {
         LoginScreen(
             dbHelper = dbHelper,
@@ -98,6 +109,7 @@ fun MainFlow() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
+    // Declaração dos estados para captura de dados dos campos de texto da interface
     var email by remember { mutableStateOf("") }
     var nomeUsuario by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -105,8 +117,10 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
     var modoCadastro by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    // Expressão regular estruturada para validação formal de sintaxe de e-mail
     val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
 
+    // Estrutura padrão de layout com barra superior adaptável ao modo de visualização
     Scaffold(
         topBar = { TopAppBar(title = { Text(if (modoCadastro) "LendIt - Criar Conta" else "LendIt - Entrar") }) }
     ) { padding ->
@@ -124,6 +138,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Campo de inserção do e-mail do usuário
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it; erroMensagem = "" },
@@ -133,6 +148,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
             )
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Campo condicional exibido apenas se o fluxo for de novo cadastro
             if (modoCadastro) {
                 OutlinedTextField(
                     value = nomeUsuario,
@@ -144,6 +160,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
+            // Campo de inserção da credencial de senha do usuário
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it; erroMensagem = "" },
@@ -152,6 +169,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
                 singleLine = true
             )
 
+            // Exibição condicional de mensagens de erro de validação ou autenticação
             if (erroMensagem.isNotBlank()) {
                 Text(
                     text = erroMensagem,
@@ -163,6 +181,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Define os botões de ação com base no estado atual da tela (Login ou Cadastro)
             if (!modoCadastro) {
                 Button(
                     onClick = {
@@ -170,6 +189,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
                             erroMensagem = "Preencha todos os campos."
                             return@Button
                         }
+                        // Consulta o SQLite para verificar a existência e validade do usuário
                         val userId = dbHelper.realizarLogin(email, password)
                         if (userId != null) {
                             onLoginSucesso(userId)
@@ -184,6 +204,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Altera o estado interno da tela para o modo de criação de credenciais
                 OutlinedButton(
                     onClick = { modoCadastro = true; erroMensagem = "" },
                     modifier = Modifier.fillMaxWidth()
@@ -196,6 +217,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
                         val emailLimpo = email.trim().lowercase()
                         val nomeLimpo = nomeUsuario.trim()
 
+                        // Aplica validações de formato e tamanho mínimo antes da persistência
                         if (!emailLimpo.matches(emailRegex)) {
                             erroMensagem = "Insira um formato de e-mail válido."
                             return@Button
@@ -209,6 +231,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
                             return@Button
                         }
 
+                        // Registra o novo usuário nas tabelas locais do SQLite
                         val novoUserId =
                             dbHelper.cadastrarUsuario(emailLimpo, nomeLimpo, password.trim())
                         if (novoUserId > 0) {
@@ -226,6 +249,7 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Retorna o estado interno da interface para o modo de login padrão
                 TextButton(onClick = { modoCadastro = false; erroMensagem = "" }) {
                     Text("Voltar para o Login")
                 }
@@ -237,18 +261,22 @@ fun LoginScreen(dbHelper: DbHelper, onLoginSucesso: (Int) -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
+    // Inicialização dos estados para persistência temporária de inputs da listagem
     var nomeItem by remember { mutableStateOf("") }
     var paraQuem by remember { mutableStateOf("") }
+    // Estado observável contendo a lista de registros sincronizada com o SQLite
     var listaItens by remember { mutableStateOf(dbHelper.listarItensDoUsuario(usuarioId)) }
 
     val appContext = LocalContext.current
 
+    // Recupera dados do perfil atual para evitar operações de autoempréstimo inválidas
     val meuEmail = remember { dbHelper.obterEmailUsuario(usuarioId).lowercase() }
     val meuNome = remember { dbHelper.obterNomeUsuario(usuarioId).lowercase() }
 
     var dropdownExpandido by remember { mutableStateOf(false) }
     var itemSendoEditado by remember { mutableStateOf<ItemEmprestado?>(null) }
 
+    // Bloco de leitura direta no banco para carregar dados de sugestão de usuários (autocomplete)
     val todosUsuarios = remember {
         val lista = mutableListOf<String>()
         try {
@@ -267,12 +295,10 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
         lista
     }
 
+    // Filtra dinamicamente as sugestões conforme digitação no campo de destino
     val usuariosFiltrados = remember(paraQuem) {
         if (paraQuem.isBlank()) todosUsuarios else todosUsuarios.filter {
-            it.contains(
-                paraQuem,
-                ignoreCase = true
-            )
+            it.contains(paraQuem, ignoreCase = true)
         }
     }
 
@@ -281,6 +307,7 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
             TopAppBar(
                 title = { Text("Meus Empréstimos") },
                 actions = {
+                    // Botão para desconexão do usuário e retorno ao fluxo de login
                     IconButton(onClick = onLogout) {
                         Icon(
                             imageVector = Icons.Default.ExitToApp,
@@ -298,6 +325,7 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
                 .padding(16.dp)
                 .fillMaxSize()
         ) {
+            // Entrada de texto para descrição do objeto emprestado
             OutlinedTextField(
                 value = nomeItem,
                 onValueChange = { nomeItem = it },
@@ -306,6 +334,7 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Componente de caixa com menu expansível de sugestões integradas
             ExposedDropdownMenuBox(
                 expanded = dropdownExpandido,
                 onExpandedChange = { dropdownExpandido = it }
@@ -340,6 +369,7 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
                     val destinoLimpo = paraQuem.trim().lowercase()
 
                     if (nomeLimpo.isNotBlank() && destinoLimpo.isNotBlank()) {
+                        // Impede regras de negócio absurdas como emprestar para si próprio
                         if (destinoLimpo == meuEmail || destinoLimpo == meuNome) {
                             Toast.makeText(
                                 appContext,
@@ -349,6 +379,7 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
                             return@Button
                         }
 
+                        // Formata a data atual do sistema para inclusão no registro do empréstimo
                         val dataAtual =
                             SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
                         val novoItem = ItemEmprestado(
@@ -357,6 +388,7 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
                             paraQuem = paraQuem.trim(),
                             dataEmprestimo = dataAtual
                         )
+                        // Insere e atualiza instantaneamente a lista observada na interface
                         dbHelper.inserirItem(novoItem)
                         listaItens = dbHelper.listarItensDoUsuario(usuarioId)
                         nomeItem = ""
@@ -368,21 +400,24 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
                 Text("Salvar Empréstimo")
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            // Renderização condicional para listas vazias vs listas com dados
             if (listaItens.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Nenhum item pendente.", color = Color.Gray)
                 }
             } else {
+                // Lista otimizada com reciclagem de componentes em tela (LazyColumn)
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(listaItens) { item ->
                         ItemCard(
                             item = item,
                             onEditClick = { itemSendoEditado = item },
                             onDeletar = {
+                                // Remove o registro associado e limpa o estado local
                                 dbHelper.deletarItem(item.id, usuarioId)
                                 listaItens = dbHelper.listarItensDoUsuario(usuarioId)
                             }
@@ -393,6 +428,7 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
         }
     }
 
+    // Caixa de diálogo interna de modificação disparada ao clicar em editar
     if (itemSendoEditado != null) {
         var nomeEditado by remember { mutableStateOf(itemSendoEditado!!.nome) }
         var paraQuemEditado by remember { mutableStateOf(itemSendoEditado!!.paraQuem) }
@@ -439,11 +475,13 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
                         }
 
                         if (nomeEditado.isNotBlank() && paraQuemEditado.trim().isNotBlank()) {
+                            // Cria uma cópia imutável do objeto com as modificações aplicadas
                             val itemAtualizado = itemSendoEditado!!.copy(
                                 nome = nomeEditado.trim(),
                                 paraQuem = paraQuemEditado.trim(),
                                 finalizado = finalizadoEditado
                             )
+                            // Envia as atualizações ao DBHelper e fecha o diálogo
                             dbHelper.atualizarItem(itemAtualizado)
                             listaItens = dbHelper.listarItensDoUsuario(usuarioId)
                             itemSendoEditado = null
@@ -460,6 +498,7 @@ fun LendItApp(dbHelper: DbHelper, usuarioId: Int, onLogout: () -> Unit) {
 
 @Composable
 fun ItemCard(item: ItemEmprestado, onEditClick: () -> Unit, onDeletar: () -> Unit) {
+    // Componente visual de cartão com opacidade adaptativa baseado no encerramento do empréstimo
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -477,6 +516,7 @@ fun ItemCard(item: ItemEmprestado, onEditClick: () -> Unit, onDeletar: () -> Uni
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                // Altera dinamicamente o estilo do texto inserindo uma linha sobre o nome se finalizado
                 Text(
                     text = item.nome,
                     style = MaterialTheme.typography.bodyLarge,
@@ -490,6 +530,7 @@ fun ItemCard(item: ItemEmprestado, onEditClick: () -> Unit, onDeletar: () -> Uni
                 )
             }
             Row {
+                // Aciona a abertura do modal carregando a referência do objeto atual
                 IconButton(onClick = onEditClick) {
                     Icon(
                         imageVector = Icons.Default.Edit,
@@ -497,6 +538,7 @@ fun ItemCard(item: ItemEmprestado, onEditClick: () -> Unit, onDeletar: () -> Uni
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+                // Dispara o callback para exclusão imediata do registro selecionado
                 IconButton(onClick = onDeletar) {
                     Icon(
                         imageVector = Icons.Default.Delete,
